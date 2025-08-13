@@ -1,0 +1,36 @@
+name: Mirror to Backup
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight UTC
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add backup remote
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          git remote add backup "https://x-access-token:${BACKUP_TOKEN}@github.com/Renjithcr20/primary-repo-backup.git"
+          git fetch --prune --tags origin "+refs/*:refs/*"
+
+      - name: Push all refs to backup
+        run: |
+          git push --prune --mirror backup
